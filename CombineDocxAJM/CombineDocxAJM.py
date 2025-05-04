@@ -66,6 +66,7 @@ import questionary
 from docx import Document
 from docx.opc.exceptions import PackageNotFoundError
 from docxcompose.composer import Composer
+from setuptools.sandbox import save_path
 
 
 class FileSorter:
@@ -231,8 +232,8 @@ class CombineDocx:
     """
 
     def __init__(self, master_filename, file_list, directory_to_combine, **kwargs):
-        self._logger = kwargs.get('logger', getLogger('CombineDocx'))
-        self._check_fallback_logger_config()
+        self._logger = kwargs.get('logger', getLogger(self.__class__.__name__))
+        self._check_fallback_logger_config(self.__class__.__name__)
         self._config = kwargs.get('config', None)
 
         self.master_filename = Path(master_filename).as_posix()
@@ -257,7 +258,7 @@ class CombineDocx:
 
         self.save_path = kwargs.get('save_path', Path(self.directory_to_combine, self.combined_filename))
 
-    def _check_fallback_logger_config(self, default_logger_name='CombineDocx'):
+    def _check_fallback_logger_config(self, default_logger_name):
         if self._logger.name == default_logger_name:
             basicConfig(level='INFO')
             self._logger.info('using basic config')
@@ -544,7 +545,6 @@ class CombineSortedDocx(CombineDocx, FileSorter):
 
     def __init__(self, master_filename, directory_to_combine, **kwargs):
         self._file_list = []
-        self._logger = kwargs.get('logger', Logger("dummy_logger"))
         self.directory_to_combine = Path(directory_to_combine)
         FileSorter.__init__(self, self.directory_to_combine, **kwargs)
         super().__init__(master_filename, self.file_list, directory_to_combine, **kwargs)
@@ -564,13 +564,16 @@ class SingleFileCombine(CombineDocx):
     _DIR_TO_COMBINE_DUMMY_VALUE = ''
 
     def __init__(self, master_filename, child_file, **kwargs):
+        self._logger = kwargs.get('logger', getLogger(self.__class__.__name__))
+        self.master_filename = master_filename
         self._child_file = child_file
+        sp = kwargs.get('save_path',
+                        Path('./', f'{self.master_filename[:-5]}_combined_file.docx'))
+        kwargs.pop('save_path', None)
+        kwargs.pop('logger', None)
 
-        self.save_path = kwargs.get('save_path', Path('./', f'{self.master_filename[:-5]}_combined_file.docx'))
-        kwargs.update({'save_path': self.save_path})
-
-        super().__init__(master_filename, list(self.child_file),
-                         SingleFileCombine._DIR_TO_COMBINE_DUMMY_VALUE, **kwargs)
+        super().__init__(self.master_filename, list(self.child_file),
+                         SingleFileCombine._DIR_TO_COMBINE_DUMMY_VALUE, save_path=sp, **kwargs)
 
     @property
     def child_file(self):
@@ -598,6 +601,8 @@ class SingleFileCombine(CombineDocx):
 
 
 if __name__ == '__main__':
-    ...
-
-
+    sfc = SingleFileCombine(
+        '../Misc_Project_Files/master.docx',
+        '../Misc_Project_Files/child.docx')
+        #save_path='../Misc_Project_Files/combined.docx')
+    sfc.append_and_save()
