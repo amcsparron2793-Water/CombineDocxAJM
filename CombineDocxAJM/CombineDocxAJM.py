@@ -416,7 +416,7 @@ class CombineDocx:
 
     @save_path.setter
     def save_path(self, value):
-        self._save_path = value
+        self._save_path = Path(value)
 
     @staticmethod
     def normalize_child_doc(doc_to_append):
@@ -565,9 +565,12 @@ class SingleFileCombine(CombineDocx):
 
     def __init__(self, master_filename, child_file, **kwargs):
         self._child_file = child_file
+
+        self.save_path = kwargs.get('save_path', Path('./', f'{self.master_filename[:-5]}_combined_file.docx'))
+        kwargs.update({'save_path': self.save_path})
+
         super().__init__(master_filename, list(self.child_file),
                          SingleFileCombine._DIR_TO_COMBINE_DUMMY_VALUE, **kwargs)
-        self.save_path = Path('./', f'{self.master_filename[:-5]}_combined_file.docx')
 
     @property
     def child_file(self):
